@@ -1,253 +1,41 @@
-<!DOCTYPE html>
-<html lang="th">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>สรุปผลวิ่ง SF Sport Club 2025</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;700&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Sarabun', sans-serif;
-            background-color: #FDFBF6;
-        }
-    </style>
-</head>
-<body class="text-gray-800">
+name: Deploy static site to Pages
 
-    <div class="container mx-auto p-4 sm:p-6 md:p-8">
-        <header class="text-center mb-8">
-            <h1 class="text-3xl md:text-4xl font-bold text-[#4A4A4A]">แดชบอร์ดสรุปผลวิ่ง SF Sport Club 2025</h1>
-            <p class="text-gray-500 mt-2">วิเคราะห์ข้อมูลการวิ่งและอันดับทีม</p>
-        </header>
+on:
+  push:
+    branches: [ main ]   # หรือชื่อ branch ที่คุณใช้
+  workflow_dispatch:
 
-        <div class="flex flex-wrap items-center justify-center gap-4 max-w-2xl mx-auto mb-8 bg-white p-4 rounded-xl shadow-md border border-gray-200">
-            <div class="w-full sm:w-auto flex-1">
-                <label for="teamFilter" class="block text-sm font-medium text-gray-600 mb-1">เลือกทีม:</label>
-                <select id="teamFilter" class="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#C8A07D] focus:border-[#C8A07D] transition">
-                    <option value="all">ดูทั้งหมด</option>
-                </select>
-            </div>
-            <div class="w-full sm:w-auto flex-1">
-                <label for="dateFilter" class="block text-sm font-medium text-gray-600 mb-1">เลือกวันที่ส่ง:</label>
-                <select id="dateFilter" class="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#C8A07D] focus:border-[#C8A07D] transition" disabled>
-                    <option value="all">ดูทั้งหมด</option>
-                </select>
-            </div>
-        </div>
+permissions:
+  contents: read
+  pages: write
+  id-token: write
 
-        <section id="kpi-cards" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-8">
-            <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200 text-center transition-transform hover:scale-105">
-                <h3 class="text-lg font-semibold text-gray-500">ระยะทางรวมทั้งหมด (กม.)</h3>
-                <p id="totalDistance" class="text-4xl font-bold text-[#4A5568] mt-2">0</p>
-            </div>
-            <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200 text-center transition-transform hover:scale-105">
-                <h3 class="text-lg font-semibold text-gray-500">จำนวนครั้งที่ส่งผล</h3>
-                <p id="totalSubmissions" class="text-4xl font-bold text-[#D35D5D] mt-2">0</p>
-            </div>
-            <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200 text-center transition-transform hover:scale-105">
-                <h3 class="text-lg font-semibold text-gray-500">จำนวนผู้ส่งผลทั้งหมด</h3>
-                <p id="totalParticipants" class="text-4xl font-bold text-[#5A9E72] mt-2">0</p>
-            </div>
-            <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200 text-center transition-transform hover:scale-105">
-                <h3 class="text-lg font-semibold text-gray-500">จำนวนทีมทั้งหมด</h3>
-                <p id="totalTeams" class="text-4xl font-bold text-[#5A9E72] mt-2">0</p>
-            </div>
-        </section>
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
 
-        <main class="grid grid-cols-1 lg:grid-cols-5 gap-8">
-            <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-md border border-gray-200">
-                <h2 class="text-xl font-bold text-center mb-4 text-[#4A4A4A]">ตารางอันดับ Top 10 ทีม</h2>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm text-left">
-                        <thead class="text-xs text-gray-700 uppercase bg-gray-100">
-                            <tr>
-                                <th scope="col" class="px-4 py-3">อันดับ</th>
-                                <th scope="col" class="px-4 py-3">ชื่อทีม</th>
-                                <th scope="col" class="px-4 py-3">ระยะทางรวม (กม.)</th>
-                            </tr>
-                        </thead>
-                        <tbody id="top10TableBody">
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-            <div class="lg:col-span-3 bg-white p-6 rounded-xl shadow-md border border-gray-200">
-                <h2 class="text-xl font-bold mb-4 text-[#4A4A4A]">รายละเอียดผลวิ่งรายวัน</h2>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm text-left">
-                        <thead class="text-xs text-gray-700 uppercase bg-gray-100">
-                            <tr>
-                                <th scope="col" class="px-4 py-3">วันที่ส่ง</th>
-                                <th scope="col" class="px-4 py-3">ชื่อทีม</th>
-                                <th scope="col" class="px-4 py-3">ชื่อผู้ส่ง</th>
-                                <th scope="col" class="px-4 py-3">ระยะวิ่ง (กม.)</th>
-                            </tr>
-                        </thead>
-                        <tbody id="dailyRunTableBody">
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </main>
-    </div>
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
 
-    <script>
-        // URL ที่ได้จากการ Deploy Apps Script ของคุณ
-        const sheetUrl = 'https://script.google.com/macros/s/AKfycbwOMSgQUjfw82IUwWoloH91_OkLMQr0Z_PsiGo1Y7OOhxX3IpzF_v_2tOtw1LhlBIVR1w/exec';
-        
-        const teamFilter = document.getElementById('teamFilter');
-        const dateFilter = document.getElementById('dateFilter');
-        const totalDistanceEl = document.getElementById('totalDistance');
-        const totalSubmissionsEl = document.getElementById('totalSubmissions');
-        const totalParticipantsEl = document.getElementById('totalParticipants');
-        const totalTeamsEl = document.getElementById('totalTeams');
-        const top10TableBody = document.getElementById('top10TableBody');
-        const dailyRunTableBody = document.getElementById('dailyRunTableBody');
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .   # ถ้าไฟล์ index.html อยู่ root ให้ใช้ "."
+      
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
 
-        let allData = [];
-
-        async function fetchSheetData() {
-            try {
-                const response = await fetch(sheetUrl);
-                allData = await response.json();
-                
-                populateTeamFilter();
-                updateDashboard('all', 'all');
-            } catch (error) {
-                console.error("Error fetching data:", error);
-            }
-        }
-
-        function populateTeamFilter() {
-            const teamNames = [...new Set(allData.map(item => item.B).filter(name => name))].sort();
-            teamNames.forEach(name => {
-                const option = document.createElement('option');
-                option.value = name;
-                option.textContent = name;
-                teamFilter.appendChild(option);
-            });
-        }
-
-        function populateDateFilter(selectedTeam) {
-            dateFilter.innerHTML = '<option value="all">ดูทั้งหมด</option>';
-            if (selectedTeam === 'all') {
-                dateFilter.disabled = true;
-                return;
-            }
-            dateFilter.disabled = false;
-            // ใช้คอลัมน์ A (Timestamp) สำหรับการกรองวันที่
-            const dates = [...new Set(allData.filter(item => item.B === selectedTeam).map(item => item.A))].sort();
-            dates.forEach(date => {
-                const option = document.createElement('option');
-                option.value = date;
-                option.textContent = date;
-                dateFilter.appendChild(option);
-            });
-        }
-
-        function updateDashboard(team, date) {
-            let filteredData = allData;
-            
-            if (team !== 'all') {
-                filteredData = filteredData.filter(item => item.B === team);
-            }
-            
-            if (date !== 'all') {
-                filteredData = filteredData.filter(item => item.A === date);
-            }
-
-            // Calculate KPIs
-            // ใช้คอลัมน์ E สำหรับระยะทาง
-            const totalDistance = filteredData.reduce((sum, item) => sum + (item.E || 0), 0);
-            const totalSubmissions = filteredData.length;
-            // ใช้คอลัมน์ C สำหรับชื่อผู้ส่ง
-            const uniqueParticipants = [...new Set(filteredData.map(item => item.C))].length;
-            // ใช้คอลัมน์ B สำหรับชื่อทีม
-            const uniqueTeams = [...new Set(allData.map(item => item.B))].length;
-
-            totalDistanceEl.textContent = totalDistance.toFixed(2);
-            totalSubmissionsEl.textContent = totalSubmissions;
-            totalParticipantsEl.textContent = uniqueParticipants;
-            totalTeamsEl.textContent = uniqueTeams;
-
-            // Update tables
-            updateTop10Table();
-            updateDailyTable(filteredData);
-        }
-
-        function updateTop10Table() {
-            top10TableBody.innerHTML = '';
-            
-            const teamTotals = {};
-            // ใช้คอลัมน์ B สำหรับชื่อทีม และ E สำหรับระยะทาง
-            allData.forEach(item => {
-                const team = item.B;
-                const distance = item.E || 0;
-                teamTotals[team] = (teamTotals[team] || 0) + distance;
-            });
-
-            const sortedTeams = Object.keys(teamTotals)
-                .map(key => ({ team: key, distance: teamTotals[key] }))
-                .sort((a, b) => b.distance - a.distance)
-                .slice(0, 10);
-
-            if (sortedTeams.length === 0) {
-                top10TableBody.innerHTML = `<tr><td colspan="3" class="text-center py-4">ไม่พบข้อมูล</td></tr>`;
-                return;
-            }
-
-            sortedTeams.forEach((item, index) => {
-                const row = `
-                    <tr class="border-b hover:bg-gray-50">
-                        <td class="px-4 py-3 font-semibold">${index + 1}</td>
-                        <td class="px-4 py-3 font-medium">${item.team || '-'}</td>
-                        <td class="px-4 py-3">${item.distance.toFixed(2)}</td>
-                    </tr>
-                `;
-                top10TableBody.innerHTML += row;
-            });
-        }
-
-        function updateDailyTable(filteredData) {
-            dailyRunTableBody.innerHTML = '';
-            if (filteredData.length === 0) {
-                dailyRunTableBody.innerHTML = `<tr><td colspan="4" class="text-center py-4">ไม่พบข้อมูล</td></tr>`;
-                return;
-            }
-            filteredData.forEach(item => {
-                const row = `
-                    <tr class="border-b hover:bg-gray-50">
-                        <td class="px-4 py-3">${item.A || '-'}</td>
-                        <td class="px-4 py-3 font-medium">${item.B || '-'}</td>
-                        <td class="px-4 py-3">${item.C || '-'}</td>
-                        <td class="px-4 py-3">${(item.E || 0).toFixed(2)}</td>
-                    </tr>
-                `;
-                dailyRunTableBody.innerHTML += row;
-            });
-        }
-        
-        // Event Listeners for filters
-        teamFilter.addEventListener('change', (e) => {
-            const selectedTeam = e.target.value;
-            populateDateFilter(selectedTeam);
-            dateFilter.value = 'all';
-            updateDashboard(selectedTeam, 'all');
-        });
-        
-        dateFilter.addEventListener('change', (e) => {
-            const selectedTeam = teamFilter.value;
-            const selectedDate = e.target.value;
-            updateDashboard(selectedTeam, selectedDate);
-        });
-
-        document.addEventListener('DOMContentLoaded', () => {
-            fetchSheetData();
-        });
     </script>
 </body>
 </html>
