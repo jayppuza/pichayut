@@ -47,19 +47,19 @@
         </div>
 
         <section id="kpi-cards" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-8">
-            <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200 text-center transition-transform hover:scale-105">
+            <div class="bg-white p-6 rounded-3xl shadow-lg border border-gray-100 text-center transition-transform hover:scale-105">
                 <h3 class="text-lg font-semibold text-gray-500">ระยะทางรวมทั้งหมด (กม.)</h3>
                 <p id="totalDistance" class="text-4xl font-bold text-[#4A5568] mt-2">0</p>
             </div>
-            <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200 text-center transition-transform hover:scale-105">
+            <div class="bg-white p-6 rounded-3xl shadow-lg border border-gray-100 text-center transition-transform hover:scale-105">
                 <h3 class="text-lg font-semibold text-gray-500">จำนวนครั้งที่ส่งผล</h3>
                 <p id="totalSubmissions" class="text-4xl font-bold text-[#D35D5D] mt-2">0</p>
             </div>
-            <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200 text-center transition-transform hover:scale-105">
+            <div class="bg-white p-6 rounded-3xl shadow-lg border border-gray-100 text-center transition-transform hover:scale-105">
                 <h3 class="text-lg font-semibold text-gray-500">จำนวนผู้ส่งผลทั้งหมด</h3>
                 <p id="totalParticipants" class="text-4xl font-bold text-[#5A9E72] mt-2">0</p>
             </div>
-            <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200 text-center transition-transform hover:scale-105">
+            <div class="bg-white p-6 rounded-3xl shadow-lg border border-gray-100 text-center transition-transform hover:scale-105">
                 <h3 class="text-lg font-semibold text-gray-500">จำนวนทีมทั้งหมด</h3>
                 <p id="totalTeams" class="text-4xl font-bold text-[#5A9E72] mt-2">0</p>
             </div>
@@ -107,6 +107,7 @@
                         <thead class="text-xs text-gray-700 uppercase bg-gray-100">
                             <tr>
                                 <th scope="col" class="px-4 py-3">วันที่ส่ง</th>
+                                <th scope="col" class="px-4 py-3">เวลา</th>
                                 <th scope="col" class="px-4 py-3">ชื่อทีม</th>
                                 <th scope="col" class="px-4 py-3">ชื่อผู้ส่ง</th>
                                 <th scope="col" class="px-4 py-3">ระยะวิ่ง (กม.)</th>
@@ -160,6 +161,31 @@
             }
         }
 
+        /**
+         * Parses a date string and returns a formatted date and time object.
+         *
+         * @param {string} dateStr The date string from the source data.
+         * @returns {{date: string, time: string}} An object containing the formatted date and time.
+         */
+        function extractDateAndTime(dateStr) {
+            if (!dateStr) return { date: '-', time: '-' };
+
+            const date = new Date(dateStr);
+            // Check if the date is a valid date object
+            if (isNaN(date.getTime())) {
+                return { date: '-', time: '-' };
+            }
+
+            const dateOptions = { day: 'numeric', month: 'numeric', year: 'numeric' };
+            const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit' };
+            
+            const formattedDate = new Intl.DateTimeFormat('th-TH', dateOptions).format(date);
+            const formattedTime = new Intl.DateTimeFormat('th-TH', timeOptions).format(date);
+            
+            return { date: formattedDate, time: formattedTime };
+        }
+
+
         function updateDashboard(location = 'all', team = 'all', date = 'all') {
             if (!isDataLoaded) return;
             
@@ -183,7 +209,10 @@
                 filteredData = filteredData.filter(item => item.B === team);
             }
             if (date !== 'all') {
-                filteredData = filteredData.filter(item => item.A === date);
+                filteredData = filteredData.filter(item => {
+                    const { date: thaiDate } = extractDateAndTime(item.A);
+                    return thaiDate === date;
+                });
             }
 
             // Calculate KPIs
@@ -199,7 +228,9 @@
 
             // Update tables
             updateTop10Table();
-            updateDailyTable(filteredData);
+            // Call the daily table update function without passing filtered data,
+            // as it should always show the 10 most recent from all data.
+            updateDailyTable();
         }
 
         function populateTeamFilter(data) {
@@ -220,7 +251,10 @@
                 return;
             }
             dateFilter.disabled = false;
-            const dates = [...new Set(data.filter(item => item.B === selectedTeam).map(item => item.A))].sort();
+            const dates = [...new Set(data.filter(item => item.B === selectedTeam).map(item => {
+                const { date: thaiDate } = extractDateAndTime(item.A);
+                return thaiDate;
+            }))].sort((a, b) => new Date(b) - new Date(a));
             dates.forEach(date => {
                 const option = document.createElement('option');
                 option.value = date;
@@ -228,6 +262,7 @@
                 dateFilter.appendChild(option);
             });
         }
+
 
         function updateTop10Table() {
             // Calculate and display HO Top 10
@@ -257,8 +292,18 @@
             renderTable(top10TableLO, sortedLoTeams, 3);
         }
 
-        function updateDailyTable(filteredData) {
-            renderTable(dailyRunTableBody, filteredData, 4, true);
+        function updateDailyTable() {
+            // รวมข้อมูลทั้งหมดจาก HO และ LO เข้าด้วยกัน
+            const allCombinedData = [...allData.HO, ...allData.LO];
+            
+            // เรียงลำดับข้อมูลตามวันที่ส่งผล (คอลัมน์ A) จากล่าสุดไปเก่าสุด
+            const sortedRecentData = allCombinedData.sort((a, b) => {
+                const dateA = new Date(a.A);
+                const dateB = new Date(b.A);
+                return dateB - dateA; // Newest first
+            }).slice(0, 10); // แสดงแค่ 10 รายการล่าสุด
+            
+            renderTable(dailyRunTableBody, sortedRecentData, 5, true);
         }
 
         function renderTable(tableBody, data, colCount, isDailyTable = false) {
@@ -269,10 +314,14 @@
             }
             data.forEach((item, index) => {
                 let row;
+                const rowClass = isDailyTable && index === 0 ? 'bg-green-50' : '';
+                
                 if (isDailyTable) {
+                    const { date: thaiDate, time: thaiTime } = extractDateAndTime(item.A);
                     row = `
-                        <tr class="border-b hover:bg-gray-50">
-                            <td class="px-4 py-3">${item.A || '-'}</td>
+                        <tr class="border-b hover:bg-gray-50 ${rowClass}">
+                            <td class="px-4 py-3">${thaiDate || '-'}</td>
+                            <td class="px-4 py-3">${thaiTime || '-'}</td>
                             <td class="px-4 py-3 font-medium">${item.B || '-'}</td>
                             <td class="px-4 py-3">${item.C || '-'}</td>
                             <td class="px-4 py-3">${(item.E || 0).toFixed(2)}</td>
@@ -319,4 +368,3 @@
     </script>
 </body>
 </html>
-
